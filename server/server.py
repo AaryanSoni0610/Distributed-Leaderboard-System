@@ -1,6 +1,6 @@
 # Description: This file contains the FastAPI server that will be used to serve the model and the web interface.
 
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI
 from fastapi.responses import FileResponse
 import os, random, string, json, logging as log
 from multiprocessing import Process
