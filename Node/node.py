@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
-import requests, logging, atexit, argparse
+import logging, atexit, argparse
 from db_operations import write, get_data
+from node_utils import make_post_request
 
 app = Flask(__name__)
 region = None
@@ -9,24 +10,6 @@ HOST = None
 PORT = None
 
 
-def make_post_request(url, data):
-    headers = {'Content-Type': 'application/json'}
-    try:
-        response = requests.post(url, json=data, headers=headers)
-        response.raise_for_status() 
-        return {
-            'url': url, 
-            'status_code': response.status_code, 
-            'response': response.json() if response.status_code == 200 else response.text
-        }
-    except requests.exceptions.RequestException as e:
-        app.logger.error(f"Error making POST request to {url}: {e}")
-        return {
-            'url': url,
-            'status_code': None,
-            'response': str(e)
-        }
-    
 
 def register_with_master(master_server_url):
     data = {
@@ -35,7 +18,7 @@ def register_with_master(master_server_url):
         'region': region
     }
     url = f"{master_server_url}/register_node"
-    response = make_post_request(url, data)
+    response = make_post_request(url, data, app.logger)
     
     if response['status_code'] == 200:
         app.logger.info('Registered with master server successfully.')
@@ -91,8 +74,8 @@ def store_data():
     return jsonify({'message': "Stored Successfully"}), 200
 
 
-@app.route('/get_data', methods=['GET'])
-def get_all_data():
+@app.route('/get_region_data', methods=['GET'])
+def get_region_data():
     region = request.args.get('region')
     other = '_other' if request.args.get('isReplica') == 'True' else ''
     data = get_data(f"{region}{other}", app.logger)

@@ -1,29 +1,12 @@
 from flask import Flask, request, jsonify
-import requests, logging, argparse, time
+import logging, argparse, time
+from utils import make_post_request, make_get_request
 from constants import HYDERABAD, GOA, PILANI
 
 app = Flask(__name__)
 
 region_servers = None
 region_replica = None
-
-def make_post_request(url, data):
-    headers = {'Content-Type': 'application/json'}
-    try:
-        response = requests.post(url, json=data, headers=headers)
-        response.raise_for_status()  # Raise an HTTPError for bad responses
-        return {
-            'url': url, 
-            'status_code': response.status_code, 
-            'response': response.json() if response.status_code == 200 else response.text
-        }
-    except requests.exceptions.RequestException as e:
-        app.logger.error(f"Error making POST request to {url}: {e}")
-        return {
-            'url': url,
-            'status_code': None,
-            'response': str(e)
-        }
 
 
 @app.route('/')
@@ -107,7 +90,7 @@ def post_score():
     results = []
     
     for node_addr in nodes_address:
-        results.append(make_post_request(node_addr, processed_data))
+        results.append(make_post_request(node_addr, processed_data, app.logger))
 
     for result in results:
         if result["status_code"] not in [200, 201]:
@@ -115,6 +98,43 @@ def post_score():
             return jsonify({'error': f"Failed to store data at {result['url']}"}, result['status_code']), 500
 
     return jsonify({'message': "Data stored successfully"}), 200
+
+
+@app.route("/get_scores", methods=["GET"])
+def get_scores():
+    scores = {}
+    region = request.args.get('region')
+
+    for r in [HYDERABAD, GOA, PILANI]:
+        if not region or (region == r): 
+            region_server_info = region_servers[r]
+            region_server_replica_info = region_servers[region_replica[r]]
+
+            region_scores = {}
+
+            if region_server_info:
+                url_prime_region = f"http://{region_server_info.get('ip')}:{region_server_info.get('port')}/get_region_data"
+                response = make_get_request(url_prime_region, params={
+                    "region":r
+                }, logger = app.logger)
+                if response["status_code"] in [200, 201]:
+                    region_scores.update(response["response"])
+
+            if len(region_scores) == 0 and region_server_replica_info:
+                url_prime_region = f"http://{region_server_replica_info.get('ip')}:{region_server_replica_info.get('port')}/get_region_data"
+                response = make_get_request(url_prime_region, params={
+                    "region":r,
+                    "isReplica": "True"
+                }, logger = app.logger)
+                if response["status_code"] in [200, 201]:
+                    region_scores.update(response["response"])
+
+            if region_scores == {}:
+                continue
+            else:
+                scores.update(region_scores)
+    
+    return jsonify(scores), 200
 
 
 if __name__ == "__main__":
