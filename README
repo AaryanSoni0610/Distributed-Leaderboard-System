@@ -1,0 +1,24 @@
+Aaryan: implementing API server using fastAPI
+
+2 types of API communication
+- web-server to central server
+- central server to region servers
+
+API endpoints:
+- for web-server to central server
+    - create-player (while creating, all the data about player should be passed to this end-point)
+    - update-player (only player-id and updated score should be passed to this end-point)
+    - global-ranking (no data should be passed, as this end-point will simply return the global ranking)
+    - regional-ranking (only region-id should be passed to this end-point)
+
+- for central server to regional servers
+    - create-player (to create and replicate player data)   // only send requests to the region which will 
+                                                            // store the data based on consisten hashing
+    - update-player (update multiple replication with quorum based approach) // only send requests to the region 
+                                                            // which has stored the data based on consisten hashing
+    - read
+        - for gloobal ranking, requests to all the regional nodes
+        - for regional ranking, requests only specified regional server and replicated node
+
+
+write your things to do:

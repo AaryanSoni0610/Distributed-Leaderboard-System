@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login & Registration</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="./Style.css" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="#">BITS</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item active">
+                    <a class="nav-link" href="#">Home <span class="visually-hidden">(current)</span></a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Link</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                        Dropdown
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                        <li><a class="dropdown-item" href="#">Action</a></li>
+                        <li><a class="dropdown-item" href="#">Another action</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item" href="#">Something else here</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link disabled" href="#">Disabled</a>
+                </li>
+            </ul>
+            <form class="d-flex">
+                <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
+                <button class="btn btn-outline-success" type="submit">Search</button>
+            </form>
+        </div>
+    </nav>
+
+    <div class="form-wrapper">
+        <div class="form-container">
+            <!-- Login -->
+            <form id="loginForm">
+                <h2 class="text-center">Login</h2>
+                <div class="mb-3">
+                    <label for="loginEmail" class="form-label">Email address</label>
+                    <input type="email" class="form-control" id="loginEmail" placeholder="Enter email" required>
+                </div>
+                <div class="mb-3">
+                    <label for="loginPassword" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="loginPassword" placeholder="Enter password"
+                        required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Login</button>
+                <p class="mt-3 text-center">
+                    Don't have an account? <span class="toggle-btn" onclick="showRegistration()">Register here</span>
+                </p>
+            </form>
+
+            <!-- Registration -->
+            <form id="registrationForm" style="display:none;">
+                <h2 class="text-center">Register</h2>
+                <div class="mb-3">
+                    <label for="registerName" class="form-label">Full Name</label>
+                    <input type="text" class="form-control" id="registerName" placeholder="Enter full name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="registerEmail" class="form-label">Email address</label>
+                    <input type="email" class="form-control" id="registerEmail" placeholder="Enter email" required>
+                </div>
+                <div class="mb-3">
+                    <label for="registerPassword" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="registerPassword" placeholder="Enter password"
+                        required>
+                </div>
+                <div class="mb-3">
+                    <label for="registerConfirmPassword" class="form-label">Confirm Password</label>
+                    <input type="password" class="form-control" id="registerConfirmPassword"
+                        placeholder="Confirm password" required>
+                </div>
+                <button type="submit" class="btn btn-success w-100">Register</button>
+                <p class="mt-3 text-center">
+                    Already have an account? <span class="toggle-btn" onclick="showLogin()">Login here</span>
+                </p>
+            </form>
+        </div>
+    </div>
+    <script>
+        function showRegistration() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registrationForm').style.display = 'block';
+            document.querySelector('.form-container').classList.add('registration-expanded');
+        }
+
+        function showLogin() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registrationForm').style.display = 'none';
+            document.querySelector('.form-container').classList.remove('registration-expanded');
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            alert('Login form submitted');
+        });
+
+        document.getElementById('registrationForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            alert('Registration form submitted');
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
