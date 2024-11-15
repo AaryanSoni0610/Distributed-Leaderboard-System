@@ -1,6 +1,6 @@
 import json, plyvel
 
-def get_data(region, logger):
+def get_data(region):
     data = {}
     try:
         with plyvel.DB(f'{region}_db', create_if_missing=False) as db:
@@ -10,16 +10,14 @@ def get_data(region, logger):
                     decoded_value = json.loads(value.decode('utf-8'))
                     data[key.decode('utf-8')] = decoded_value
     except Exception:
-        logger.error(f"{region}_db doesnot exit")
+        print(f"Error while reading data from {region}_db")
         
     return data
 
 
-def write(region, data, logger):
+def write(region, data):
     key = data.get("key")
     value = data.get("value")
     with plyvel.DB(f'{region}_db', create_if_missing=True) as db:
         db.put(key.encode('utf-8'), json.dumps(value).encode('utf-8'))
-        if logger:
-            logger.info(f"Put operation successful for key {key} in {region}_db")
 

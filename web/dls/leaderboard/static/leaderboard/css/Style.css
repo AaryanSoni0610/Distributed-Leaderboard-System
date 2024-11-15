@@ -56,17 +56,10 @@ body {
     color: blue;
     text-decoration: underline;
 }
-.selection {
-    min-height: calc(100vh - 56px); 
-    display: flex;
-    justify-content: center; 
-    align-items: center; 
-    padding-top: 0; 
-}
 
 .select-container {
     width: 100%; 
-    max-width: 300px; /* Set the width here to match the table column width */
+    max-width: 500px; /* Set the width here to match the table column width */
     margin: 0 auto; /* Center the dropdown */
 }
 

@@ -1,14 +1,23 @@
-from flask import Flask, request, jsonify
-import logging, atexit, argparse
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import atexit, argparse, uvicorn
 from db_operations import write, get_data
 from node_utils import make_post_request
 
-app = Flask(__name__)
+app = FastAPI()
 region = None
 other_region = None
 HOST = None
 PORT = None
 
+class NodeData(BaseModel):
+    ip: str
+    port: str
+    region: str
+
+class ScoreData(BaseModel):
+    key: str
+    value: dict
 
 def register_with_master(master_server_url):
     data = {
@@ -17,13 +26,10 @@ def register_with_master(master_server_url):
         'region': region
     }
     url = f"{master_server_url}/register_node"
-    response = make_post_request(url, data, app.logger)
+    response = make_post_request(url, data)
     
-    if response['status_code'] == 200:
-        app.logger.info('Registered with master server successfully.')
-    else:
-        app.logger.error('Failed to register with master server: %s', response['response'])
-
+    if response['status_code'] != 200:
+        raise HTTPException(status_code=500, detail='Failed to register with master server')
 
 def unregister_with_master(master_server_url):
     data = {
@@ -34,51 +40,42 @@ def unregister_with_master(master_server_url):
     url = f"{master_server_url}/unregister_node"
     response = make_post_request(url, data)
     
-    if response['status_code'] == 200:
-        app.logger.info('Unregistered with master server successfully.')
-    else:
-        app.logger.error('Failed to unregister with master server: %s', response['response'])
+    if response['status_code'] != 200:
+        raise HTTPException(status_code=500, detail='Failed to unregister with master server')
 
-
-@app.route("/store_score", methods=["POST"])
-def store_data():
-    data = request.get_json()
-    if not data or not data.get("key") or not data.get("value"):
-        return jsonify({"message": "Invalid Data"}), 400
+@app.post("/store_score")
+async def store_data(data: ScoreData):
+    if not data or not data.key or not data.value:
+        raise HTTPException(status_code=400, detail="Invalid Data")
     
-    value = data.get("value")  
+    value = data.value
     if value.get("region") not in [region, other_region]:
-        return jsonify({"error": "Invalid Node to store the data"}), 500
+        raise HTTPException(status_code=500, detail="Invalid Node to store the data")
     
     num_of_failed_put_opt = 0
 
     if region == value.get("region"):
         try:
-            write(region, data, app.logger)
-        except Exception as e:
-            app.logger.error(f"Error during put operation: {e}")
+            write(region, data.dict())
+        except Exception:
             num_of_failed_put_opt += 1
 
     elif other_region == value.get("region"):
         try:
-            write(f"{other_region}_other", data, app.logger)
-        except Exception as e:
-            app.logger.error(f"Error during put operation: {e}")
+            write(f"{other_region}_other", data.dict())
+        except Exception:
             num_of_failed_put_opt += 1
 
     if num_of_failed_put_opt == 2:
-        return jsonify({"error": "Cannot store the data"}), 500
+        raise HTTPException(status_code=500, detail="Cannot store the data")
     
-    return jsonify({'message': "Stored Successfully"}), 200
+    return {"message": "Stored Successfully"}
 
-
-@app.route('/get_region_data', methods=['GET'])
-def get_region_data():
-    region = request.args.get('region')
-    other = '_other' if request.args.get('isReplica') == 'True' else ''
-    data = get_data(f"{region}{other}", app.logger)
-    return jsonify(data), 200
-
+@app.get('/get_region_data')
+async def get_region_data(region: str, isReplica: str = None):
+    other = '_other' if isReplica == 'True' else ''
+    data = get_data(f"{region}{other}")
+    return data
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Node Server')
@@ -97,9 +94,8 @@ if __name__ == "__main__":
     region = args.region
     other_region = args.other_region
 
-    logging.basicConfig(level=logging.INFO)
     MASTER_SERVER_URL = f"http://{MASTER_SERVER_HOST}:{MASTER_SERVER_PORT}"
     register_with_master(MASTER_SERVER_URL)
     atexit.register(unregister_with_master, MASTER_SERVER_URL)
 
-    app.run(debug=True, port=PORT, host=HOST, use_reloader=False)
+    uvicorn.run(app, host=HOST, port=PORT)

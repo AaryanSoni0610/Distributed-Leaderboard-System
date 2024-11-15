@@ -53,61 +53,130 @@
     </nav>
 
     <!-- Main Container with Card -->
-    <div class="selection">
+    <div class="selection" style="padding-top: 50px;">
         <div class="container mt-5 d-flex justify-content-center">
-            <div class="card">
+            <div class="card" style="width:750px; height:665px;">
                 <div class="card-body">
                     <h5 class="card-title text-center mb-3">Player Selection</h5>
-
+    
                     <!-- Dropdown Section -->
                     <div class="select-container">
-                        <select class="form-select" aria-label="Default select example">
-                            <option selected>Open this select menu</option>
-                            <option value="1">One</option>
-                            <option value="2">Two</option>
-                            <option value="3">Three</option>
+                        <select class="form-select" aria-label="Default select example" id="regionSelect">
+                            {% for region in regions %}
+                                <option value="{{ forloop.counter0 }}" {% if forloop.first %}selected{% endif %}>{{ region }}</option>
+                            {% endfor %}
                         </select>
                     </div>
-
+    
                     <!-- Table Section -->
                     <div class="table-container">
                         <h5 class="card-title text-center mt-3">Player Stats</h5>
                         <table class="table table-striped" id="playerTable">
                             <thead>
                                 <tr>
-                                    <th scope="col">Player Name <span></span></th>
-                                    <th scope="col">Score <span></span></th>
-                                    <th scope="col">Region <span></span></th>
+                                    <th scope="col">Rank</th>
+                                    <th scope="col">Player Name</th>
+                                    <th scope="col">Score</th>
+                                    <th scope="col">Region</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>John Doe</td>
-                                    <td>85</td>
-                                    <td>North America</td>
+                                {% for player in data %}
+                                <tr data-region="{{ player.region }}">
+                                    <td>{{ player.rank }}</td>
+                                    <td>{{ player.name }}</td>
+                                    <td>{{ player.score }}</td>
+                                    <td>{{ player.region }}</td>
                                 </tr>
-                                <tr>
-                                    <td>Jane Smith</td>
-                                    <td>90</td>
-                                    <td>Europe</td>
-                                </tr>
-                                <tr>
-                                    <td>Alex Johnson</td>
-                                    <td>78</td>
-                                    <td>Asia</td>
-                                </tr>
-                                <tr>
-                                    <td>Maria Garcia</td>
-                                    <td>95</td>
-                                    <td>South America</td>
-                                </tr>
+                                {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+    
+                    <!-- Pagination Controls -->
+                    <div class="pagination-controls text-center mt-3" style="position: fixed; mar">
+                        <button id="prevPage" class="btn btn-primary" disabled>Previous</button>
+                        <span id="pageInfo"></span>
+                        <button id="nextPage" class="btn btn-primary">Next</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const rowsPerPage = 10;
+        let currentPage = 1;
+        const regionSelect = document.getElementById('regionSelect');
+        const rows = Array.from(document.querySelectorAll('#playerTable tbody tr'));
+        const prevPageButton = document.getElementById('prevPage');
+        const nextPageButton = document.getElementById('nextPage');
+        const pageInfo = document.getElementById('pageInfo');
+    
+        function filterRows() {
+            const selectedRegion = regionSelect.options[regionSelect.selectedIndex].text;
+            const filteredRows = rows.filter(row => selectedRegion === 'Global' || row.getAttribute('data-region') === selectedRegion);
+            return filteredRows;
+        }
+    
+        function updateTable() {
+            const filteredRows = filterRows();
+            const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+    
+            rows.forEach(row => row.style.display = 'none');
+            filteredRows.slice(start, end).forEach((row, index) => {
+                row.style.display = '';
+                row.querySelector('td:first-child').textContent = start + index + 1; // Update rank
+            });
+    
+            pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+            prevPageButton.disabled = currentPage === 1;
+            nextPageButton.disabled = currentPage === totalPages;
+        }
+    
+        regionSelect.addEventListener('change', function() {
+            currentPage = 1;
+            updateTable();
+        });
+    
+        prevPageButton.addEventListener('click', function() {
+            if (currentPage > 1) {
+                currentPage--;
+                updateTable();
+            }
+        });
+    
+        nextPageButton.addEventListener('click', function() {
+            const filteredRows = filterRows();
+            const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                updateTable();
+            }
+        });
+    
+        updateTable();
+    });
+    </script>
+    </script>
+    <script>
+        document.getElementById('regionSelect').addEventListener('change', function() {
+            var selectedRegion = this.options[this.selectedIndex].text;
+            var rows = document.querySelectorAll('#playerTable tbody tr');
+        
+            rows.forEach(function(row) {
+                var region = row.getAttribute('data-region');
+                if (selectedRegion === 'Global' || region === selectedRegion) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 

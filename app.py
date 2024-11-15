@@ -1,79 +1,70 @@
-from flask import Flask, request, jsonify
-import logging, argparse, time
+from fastapi import FastAPI, Request, HTTPException
+from pydantic import BaseModel
+import argparse, time, uvicorn
 from utils import make_post_request, make_get_request
 from constants import HYDERABAD, GOA, PILANI
 
-app = Flask(__name__)
+app = FastAPI()
 
 region_servers = None
 region_replica = None
 
+class Node(BaseModel):
+    ip: str
+    port: int
+    region: str
 
-@app.route('/')
+class Score(BaseModel):
+    player_id: str
+    player_name: str
+    score: int
+    region: str
+
+@app.get("/")
 def home():
     return "Welcome to LeaderBoard System!"
 
-
-@app.route("/register_node", methods=["POST"])
-def register_node():
-    data = request.get_json()
-    ip = data.get('ip')
-    port = data.get('port')
-    region = data.get('region')
+@app.post("/register_node")
+def register_node(node: Node):
+    if not node.ip or not node.port or not node.region:
+        raise HTTPException(status_code=400, detail="Invalid data")
     
-    if not ip or not port or not region:
-        return jsonify({'error': 'Invalid data'}), 400
-    
-    region_servers[region] = {
-        "ip": ip,
-        "port": port,
+    region_servers[node.region] = {
+        "ip": node.ip,
+        "port": node.port,
     }
 
-    app.logger.info(f"Node registered: {region_servers[region]['ip']}:{region_servers[region]['port']}")
-    return jsonify(data), 200
+    return node
 
-
-@app.route("/unregister_node", methods=["POST"])
-def unregister_node():
-    data = request.get_json()
-    ip = data.get('ip')
-    port = data.get('port')
-    region = data.get('region')
-
-    if not ip or not port or not region:
-        return jsonify({'error': 'Invalid data'}), 400
+@app.post("/unregister_node")
+def unregister_node(node: Node):
+    if not node.ip or not node.port or not node.region:
+        raise HTTPException(status_code=400, detail="Invalid data")
     
-    region_servers[region] = None
-    app.logger.info(f"Node unregistered: {ip}:{port}")
-    return jsonify(data), 200
+    region_servers[node.region] = None
+    return node
 
-
-@app.route("/post_score", methods=["POST"])
-def post_score():
-    data = request.get_json()
-    player_id = data.get("player_id")
-    player_name = data.get("player_name")
-    score = data.get("score")
-    region = data.get("region")
+@app.post("/post_score")
+def post_score(score: Score):
     timestamp = str(time.time())
     
-    if not all([player_id, player_name, score]):
-        return jsonify({"error": "Invalid data"}), 400
+    if not all([score.player_id, score.player_name, score.score]):
+        raise HTTPException(status_code=400, detail="Invalid data")
 
-    region_server_info = region_servers[region]
-    region_server_replica_info = region_servers[region_replica[region]]
+    region_server_info = region_servers[score.region]
+    region_server_replica_info = region_servers[region_replica[score.region]]
 
     if not region_server_info and not region_server_replica_info:
-        return jsonify({"error": "Failed to store data"}), 500
+        raise HTTPException(status_code=500, detail="Failed to store data")
 
     processed_data = {
-        "key": player_id,
+        "key": score.player_id,
         "value": {
-            "player_name": player_name,
-            "player_id": player_id,
-            "score": score,
+            "player_name": score.player_name,
+            "player_id": score.player_id,
+            "score": score.score,
             "timestamp": timestamp,
-            "region": region
+            "region": score.region
         }
     }
 
@@ -90,20 +81,19 @@ def post_score():
     results = []
     
     for node_addr in nodes_address:
-        results.append(make_post_request(node_addr, processed_data, app.logger))
-
+        results.append(make_post_request(node_addr, processed_data))
+    print(1)
+    
     for result in results:
         if result["status_code"] not in [200, 201]:
-            app.logger.error(f"Error storing data at {result['url']}: {result['response']}")
-            return jsonify({'error': f"Failed to store data at {result['url']}"}, result['status_code']), 500
+            raise HTTPException(status_code=500, detail=f"Failed to store data at {result['url']}")
+    print(1)
 
-    return jsonify({'message': "Data stored successfully"}), 200
+    return {"message": "Data stored successfully"}
 
-
-@app.route("/get_scores", methods=["GET"])
-def get_scores():
+@app.get("/get_scores")
+def get_scores(region: str = None):
     scores = {}
-    region = request.args.get('region')
 
     for r in [HYDERABAD, GOA, PILANI]:
         if not region or (region == r): 
@@ -116,7 +106,7 @@ def get_scores():
                 url_prime_region = f"http://{region_server_info.get('ip')}:{region_server_info.get('port')}/get_region_data"
                 response = make_get_request(url_prime_region, params={
                     "region":r
-                }, logger = app.logger)
+                })
                 if response["status_code"] in [200, 201]:
                     region_scores.update(response["response"])
 
@@ -125,7 +115,7 @@ def get_scores():
                 response = make_get_request(url_prime_region, params={
                     "region":r,
                     "isReplica": "True"
-                }, logger = app.logger)
+                })
                 if response["status_code"] in [200, 201]:
                     region_scores.update(response["response"])
 
@@ -134,8 +124,7 @@ def get_scores():
             else:
                 scores.update(region_scores)
     
-    return jsonify(scores), 200
-
+    return scores
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Master Server')
@@ -146,7 +135,6 @@ if __name__ == "__main__":
     PORT = args.port
     MASTER_SERVER_HOST = args.master_server_host
 
-    logging.basicConfig(level=logging.INFO)
     region_servers = {
         HYDERABAD: None,
         GOA: None,
@@ -159,4 +147,4 @@ if __name__ == "__main__":
         PILANI: HYDERABAD
     }
 
-    app.run(debug=True, port=PORT, host=MASTER_SERVER_HOST)
+    uvicorn.run(app, host=MASTER_SERVER_HOST, port=PORT)
