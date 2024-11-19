@@ -16,3 +16,19 @@ def make_post_request(url, data):
             'status_code': None,
             'response': str(e)
         }
+
+def make_get_request(url, params=None):
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        return {
+            'url': url,
+            'status_code': response.status_code,
+            'response': response.json() if response.status_code == 200 else response.text
+        }
+    except requests.exceptions.RequestException as e:
+        return {
+            'url': url,
+            'status_code': None,
+            'response': str(e)
+        }

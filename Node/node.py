@@ -2,13 +2,13 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import atexit, argparse, uvicorn
 from db_operations import write, get_data
-from node_utils import make_post_request
+from node_utils import make_post_request, make_get_request
 
 app = FastAPI()
 region = None
-other_region = None
 HOST = None
 PORT = None
+MASTER_SERVER_URL = None
 
 class NodeData(BaseModel):
     ip: str
@@ -19,25 +19,25 @@ class ScoreData(BaseModel):
     key: str
     value: dict
 
-def register_with_master(master_server_url):
+def register_with_master():
     data = {
         'ip': HOST,
         'port': str(PORT),
         'region': region
     }
-    url = f"{master_server_url}/register_node"
+    url = f"{MASTER_SERVER_URL}/register_node"
     response = make_post_request(url, data)
     
     if response['status_code'] != 200:
         raise HTTPException(status_code=500, detail='Failed to register with master server')
 
-def unregister_with_master(master_server_url):
+def unregister_with_master():
     data = {
         'ip': HOST,
         'port': str(PORT),
         'region': region
     }
-    url = f"{master_server_url}/unregister_node"
+    url = f"{MASTER_SERVER_URL}/unregister_node"
     response = make_post_request(url, data)
     
     if response['status_code'] != 200:
@@ -49,7 +49,9 @@ async def store_data(data: ScoreData):
         raise HTTPException(status_code=400, detail="Invalid Data")
     
     value = data.value
-    if value.get("region") not in [region, other_region]:
+    replication_region = value.get('region')
+    
+    if value.get("region") not in [region, replication_region]:
         raise HTTPException(status_code=500, detail="Invalid Node to store the data")
     
     num_of_failed_put_opt = 0
@@ -57,13 +59,13 @@ async def store_data(data: ScoreData):
     if region == value.get("region"):
         try:
             write(region, data.dict())
-        except Exception:
+        except Exception as e:
             num_of_failed_put_opt += 1
 
-    elif other_region == value.get("region"):
+    else:
         try:
-            write(f"{other_region}_other", data.dict())
-        except Exception:
+            write(f"{replication_region}_replica", data.dict())
+        except Exception as e:
             num_of_failed_put_opt += 1
 
     if num_of_failed_put_opt == 2:
@@ -82,7 +84,6 @@ if __name__ == "__main__":
     parser.add_argument('--host', type=str, default='127.0.0.1', help='Node server host')
     parser.add_argument('--port', type=int, required=True, help='Port for the Node Server')
     parser.add_argument('--region', type=str, required=True, help='Data from the region to store')
-    parser.add_argument('--other_region', type=str, required=True, help='Data from the other region to store')
     parser.add_argument('--master_server_host', type=str, default='127.0.0.1', help='Master server host')
     parser.add_argument('--master_server_port', type=str, default='8080', help='Port for Master server')
 
@@ -92,10 +93,9 @@ if __name__ == "__main__":
     MASTER_SERVER_HOST = args.master_server_host
     MASTER_SERVER_PORT = args.master_server_port
     region = args.region
-    other_region = args.other_region
 
     MASTER_SERVER_URL = f"http://{MASTER_SERVER_HOST}:{MASTER_SERVER_PORT}"
-    register_with_master(MASTER_SERVER_URL)
-    atexit.register(unregister_with_master, MASTER_SERVER_URL)
+    register_with_master()
+    atexit.register(unregister_with_master)
 
     uvicorn.run(app, host=HOST, port=PORT)
