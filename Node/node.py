@@ -1,8 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import atexit, argparse, uvicorn
+import atexit, argparse, uvicorn, requests
 from db_operations import write, get_data
-from node_utils import make_post_request, make_get_request
 
 app = FastAPI()
 region = None
@@ -18,6 +17,39 @@ class NodeData(BaseModel):
 class ScoreData(BaseModel):
     key: str
     value: dict
+
+def make_post_request(url, data):
+    headers = {'Content-Type': 'application/json'}
+    try:
+        response = requests.post(url, json=data, headers=headers)
+        response.raise_for_status() 
+        return {
+            'url': url, 
+            'status_code': response.status_code, 
+            'response': response.json() if response.status_code == 200 else response.text
+        }
+    except requests.exceptions.RequestException as e:
+        return {
+            'url': url,
+            'status_code': None,
+            'response': str(e)
+        }
+
+def make_get_request(url, params=None):
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        return {
+            'url': url,
+            'status_code': response.status_code,
+            'response': response.json() if response.status_code == 200 else response.text
+        }
+    except requests.exceptions.RequestException as e:
+        return {
+            'url': url,
+            'status_code': None,
+            'response': str(e)
+        }
 
 def register_with_master():
     data = {
