@@ -14,7 +14,7 @@
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <a class="navbar-brand" href="#">Game Leaderboard</a>
+        <a class="navbar-brand" href="#">BITS Leaderboard</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
             aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -23,10 +23,7 @@
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
             <ul class="navbar-nav me-auto">
                 <li class="nav-item active">
-                    <a class="nav-link" href="#">Home</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#">Leaderboards</a>
+                    <a class="nav-link" href="/rankings/">Rankings</a>
                 </li>
             </ul>
         </div>
@@ -36,24 +33,7 @@
     
     <div class="form-wrapper">
         <div class="form-container newCard">
-            <h4 class="text-center">Create Leaderboard</h4>
             <form id="leaderboardForm">
-                <div class="mb-3">
-                    <label for="leaderboardName" class="form-label">Leaderboard Name</label>
-                    <input type="text" class="form-control" id="leaderboardName" placeholder="Enter leaderboard name" required>
-                </div>
-
-                <div class="mb-3">
-                    <label for="regionsCount" class="form-label">Number of Regions</label>
-                    <input type="number" class="form-control" id="regionsCount" placeholder="Enter number of regions" required>
-                </div>
-
-                <div class="mb-3">
-                    <label for="leaderboardDescription" class="form-label">Leaderboard Description (Optional)</label>
-                    <textarea class="form-control" id="leaderboardDescription" placeholder="Enter description"></textarea>
-                </div>
-
-                <button type="submit" class="btn btn-primary w-100">Create Leaderboard</button>
             </form>
 
             <!-- Player Section -->

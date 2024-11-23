@@ -76,28 +76,26 @@ def unregister_with_master():
         raise HTTPException(status_code=500, detail='Failed to unregister with master server')
 
 @app.post("/store_score")
-async def store_data(data: ScoreData):
-    if not data or not data.key or not data.value:
-        raise HTTPException(status_code=400, detail="Invalid Data")
+async def store_data(data: dict):
+    key = list(data.keys())[0]
+    scores = [ScoreData(**s) for s in data[key]]
     
-    value = data.value
-    replication_region = value.get('region')
-    
-    if value.get("region") not in [region, replication_region]:
-        raise HTTPException(status_code=500, detail="Invalid Node to store the data")
+    replication_region = key
     
     num_of_failed_put_opt = 0
 
-    if region == value.get("region"):
+    if region == key:
         try:
-            write(region, data.dict())
+            write(region, scores)
         except Exception as e:
+            print(e)
             num_of_failed_put_opt += 1
 
     else:
         try:
-            write(f"{replication_region}_replica", data.dict())
+            write(f"{replication_region}_replica", scores)
         except Exception as e:
+            print(e)
             num_of_failed_put_opt += 1
 
     if num_of_failed_put_opt == 2:
@@ -106,10 +104,15 @@ async def store_data(data: ScoreData):
     return {"message": "Stored Successfully"}
 
 @app.get('/get_region_data')
-async def get_region_data(region: str, isReplica: str = None):
-    other = '_other' if isReplica == 'True' else ''
+async def get_region_data(region: str, isReplica: str = None, isTempReplica: str = None):
+    other = '_replica' if isReplica else ''
     data = get_data(f"{region}{other}")
     return data
+
+@app.post('/sync_data')
+async def sync_data(region: str, isReplica: str = None, data: dict = None):
+    data = get_data(f"{region}_replica")
+    
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Node Server')

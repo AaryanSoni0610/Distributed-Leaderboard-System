@@ -2,8 +2,8 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse, JsonResponse
 import requests, random
 
-def leaderboard(request):
-    return render(request, 'leaderboard/gameRanking.html')
+def add_player(request):
+    return render(request, 'leaderboard/addPlayer.html')
 
 def rankings(request):
     
