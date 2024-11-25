@@ -1,7 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import atexit, argparse, uvicorn, requests
-from db_operations import write, get_data
+from db_operations import *
+from connections import *
+from multiprocessing import Process
 
 app = FastAPI()
 region = None
@@ -18,65 +20,40 @@ class ScoreData(BaseModel):
     key: str
     value: dict
 
-def make_post_request(url, data):
-    headers = {'Content-Type': 'application/json'}
-    try:
-        response = requests.post(url, json=data, headers=headers)
-        response.raise_for_status() 
-        return {
-            'url': url, 
-            'status_code': response.status_code, 
-            'response': response.json() if response.status_code == 200 else response.text
-        }
-    except requests.exceptions.RequestException as e:
-        return {
-            'url': url,
-            'status_code': None,
-            'response': str(e)
-        }
+def check_replica_type(isReplica):
+    if isReplica == "True":
+        other = '_replica'
+    elif isReplica == "Temp":
+        other = '_temp'
+    else:
+        other = ''
+    return other
 
-def make_get_request(url, params=None):
-    try:
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        return {
-            'url': url,
-            'status_code': response.status_code,
-            'response': response.json() if response.status_code == 200 else response.text
-        }
-    except requests.exceptions.RequestException as e:
-        return {
-            'url': url,
-            'status_code': None,
-            'response': str(e)
-        }
-
-def register_with_master():
-    data = {
-        'ip': HOST,
-        'port': str(PORT),
-        'region': region
-    }
-    url = f"{MASTER_SERVER_URL}/register_node"
-    response = make_post_request(url, data)
+@app.post('/create_replica')
+async def create_replica(data: dict):
+    region = data['region']
+    other = check_replica_type(data['isReplica'])
     
-    if response['status_code'] != 200:
-        raise HTTPException(status_code=500, detail='Failed to register with master server')
-
-def unregister_with_master():
-    data = {
-        'ip': HOST,
-        'port': str(PORT),
-        'region': region
-    }
-    url = f"{MASTER_SERVER_URL}/unregister_node"
-    response = make_post_request(url, data)
+    scores = [ScoreData(**s) for s in data['scores']]
+    write(f"{region}{other}", scores)
     
-    if response['status_code'] != 200:
-        raise HTTPException(status_code=500, detail='Failed to unregister with master server')
+    return {"message": "Replica created successfully"}
+
+@app.post('/delete_replica')
+async def delete_replica(data: dict):
+    region = data['region']
+    other = check_replica_type(data['isReplica'])
+        
+    delete_database(f"{region}{other}")
+    return {"message": "Replica deleted successfully"}
 
 @app.post("/store_score")
 async def store_data(data: dict):
+    isReplica = data['isReplica']
+    del data['isReplica']
+    
+    other = check_replica_type(isReplica)
+    
     key = list(data.keys())[0]
     scores = [ScoreData(**s) for s in data[key]]
     
@@ -84,35 +61,37 @@ async def store_data(data: dict):
     
     num_of_failed_put_opt = 0
 
-    if region == key:
+    if current_region == key:
         try:
             write(region, scores)
         except Exception as e:
-            print(e)
             num_of_failed_put_opt += 1
 
     else:
         try:
-            write(f"{replication_region}_replica", scores)
+            write(f"{key}{other}", scores)
         except Exception as e:
-            print(e)
             num_of_failed_put_opt += 1
 
     if num_of_failed_put_opt == 2:
-        raise HTTPException(status_code=500, detail="Cannot store the data")
+        print("Failed to store data in both regions")
     
     return {"message": "Stored Successfully"}
 
 @app.get('/get_region_data')
-async def get_region_data(region: str, isReplica: str = None, isTempReplica: str = None):
-    other = '_replica' if isReplica else ''
+async def get_region_data(region: str, isReplica: str = None):
+    other = check_replica_type(isReplica)
+    
     data = get_data(f"{region}{other}")
     return data
 
 @app.post('/sync_data')
-async def sync_data(region: str, isReplica: str = None, data: dict = None):
+async def sync_data(region: str, data: dict = None):
     data = get_data(f"{region}_replica")
-    
+
+@app.get('')
+def home():
+    return {"message": "Node Server"}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Node Server')
@@ -128,9 +107,13 @@ if __name__ == "__main__":
     MASTER_SERVER_HOST = args.master_server_host
     MASTER_SERVER_PORT = args.master_server_port
     region = args.region
+    current_region = region
 
+    write(region, [])
+    
     MASTER_SERVER_URL = f"http://{MASTER_SERVER_HOST}:{MASTER_SERVER_PORT}"
-    register_with_master()
-    atexit.register(unregister_with_master)
+    p = Process(target=register_with_master, args=(HOST, PORT, region, MASTER_SERVER_URL))
+    p.start()
+    atexit.register(lambda: unregister_with_master(HOST, PORT, region, MASTER_SERVER_URL))
 
     uvicorn.run(app, host=HOST, port=PORT)

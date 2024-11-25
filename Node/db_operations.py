@@ -11,9 +11,9 @@ def get_data(region):
                     data['scores'] += [decoded_value]
         
         # sort data based on score
-        data['scores'] = sorted(data['scores'], key=lambda x: x.get("value").get("score"), reverse=True)
-    except Exception:
-        print(f"Error while reading data from {region}_db")
+        data['scores'] = sorted(data['scores'], key=lambda x: x.get("score"), reverse=True)
+    except Exception as e:
+        print(e)
         
     return data
 
@@ -25,3 +25,9 @@ def write(region, data):
                 key = item.get("key")
                 value = item.get("value")
                 wb.put(key.encode('utf-8'), json.dumps(value).encode('utf-8'))
+
+def delete_database(region):
+    try:
+        plyvel.destroy_db(f'{region}_db')
+    except Exception:
+        print(f"Error while deleting {region}_db")
