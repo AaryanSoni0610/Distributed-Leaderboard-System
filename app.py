@@ -36,8 +36,26 @@ def get_all_regions():
 def home():
     return "Welcome to LeaderBoard System!"
 
-def sync_data(prev_id, curr_ip, curr_port):
-    prev_region, prev_ip, prev_port = get_region_details(prev_id)
+def heartbeat():
+    while True:
+        time.sleep(60)
+        print("Heartbeat")
+        regions = get_all_regions()
+        results = []
+        for region in regions:
+            if region[-1] == 1:
+                results.append(make_post_request(f'http://{region[1]}:{region[2]}/are-you-active', {}))
+        
+        for i in range(len(results)):
+            if results[i]["status_code"] != 200:
+                print(f"Region {regions[i][3]} is not active")
+                unregister_node(Node(ip=regions[i][1], port=regions[i][2], region=regions[i][3]))
+
+def sync_data(prev_id, curr_ip, curr_port, isReplica='True'):
+    prev_region, prev_ip, prev_port, prev_active = get_region_details(prev_id)
+    if not prev_active:
+        print(f"Region {prev_region} is not active")
+        return
     results = make_get_request(f'http://{prev_ip}:{prev_port}/get_region_data', params={"region": prev_region})
     score = results["response"]['scores']
     
@@ -68,7 +86,7 @@ def sync_data(prev_id, curr_ip, curr_port):
     results = []
     
     time.sleep(1)
-    results.append(make_post_request(f'http://{curr_ip}:{curr_port}/store_score', {prev_region:region_wise_scores, 'isReplica': 'True'}))
+    results.append(make_post_request(f'http://{curr_ip}:{curr_port}/store_score', {prev_region:region_wise_scores, 'isReplica': isReplica}))
     
     for result in results:
         if result["status_code"] not in [200, 201]:
@@ -84,46 +102,102 @@ def register_node(node: Node):
     total_regions = update_replication_destinations()
     
     if total_regions > 2 and not only_update:
-        print(1)
-        region, ip, port = get_region_details(1)
-        results = make_post_request(f'http://{ip}:{port}/delete_replica', {"region": region, "isReplica": "True"})
-        time.sleep(1)
+        next_region, next_ip, next_port, next_active = get_region_details(1)
+        prev_region, prev_ip, prev_port, prev_active = get_region_details(total_regions-1)
         
-    if total_regions > 1 and not only_update:
-        print(2)
-        sync_data(1, node.ip, node.port)
+        result = make_post_request(f'http://{next_ip}:{next_port}/delete_replica', {"region": prev_region, "isReplica": "True"})
+        if result["status_code"] not in [200, 201]:
+            print(f"Failed to delete replica {prev_region}")
+        
+        sync_data(total_regions-1, node.ip, node.port)
+        time.sleep(1)
+    
+    elif total_regions > 2 and only_update:
+        curr_id, curr_ip, curr_port, active = get_region_details(node.region)
+        
+        regions = get_regions()
+        total_regions = len(regions)
+
+        prev_id = curr_id - 1 if curr_id > 1 else total_regions
+        next_id = curr_id + 1 if curr_id < total_regions else 1
+
+        is_prev_active = None
+        is_next_active = None
+        for r in regions:
+            if r[0] == prev_id and prev_id != curr_id:
+                prev_region = r[3]
+                is_prev_active = r[-1]
+            if r[0] == next_id and next_id != curr_id:
+                next_region = r[3]
+                is_next_active = r[-1]
+                next_ip = r[1]
+                next_port = r[2]
+        
+        if is_prev_active:
+            replication_dest, is_active = get_temp_replication_dest(prev_id)
+            if is_active:
+                results = make_post_request(f'{replication_dest}/delete_replica', {"region": prev_region, "isReplica": "Temp"})
+                if results["status_code"] not in [200, 201]:
+                    print(f"Failed to fetch data from temp replica of {node.region}")
+                else:
+                    update_temp_replication_dest(prev_id, 0)
+        
+            sync_data(prev_id, curr_ip, curr_port)
+            time.sleep(1)
+        
+        if is_next_active:
+            sync_data(curr_id, next_ip, next_port)
+        
+    elif total_regions > 1 and not only_update:
+        sync_data(total_regions - 1, node.ip, node.port)
 
     elif only_update:
-        print(3)
-        id, ip, port = get_region_details(node.region)
+        curr_id, curr_ip, curr_port, active = get_region_details(node.region)
+        
         regions = get_regions()
-        active_regions = [r[0] for r in regions if r[-1] == 1]
-        if len(active_regions) == 1:
-            return {"message": "Only one active region, no need to sync data"}
-        else:
-            prev_active_id = 0
-            for reg in active_regions:
-                if reg < id:
-                    prev_id = reg
-                    break
-            else:
-                if active_regions[-1] != id:
-                    prev_id = active_regions[-1]
+        total_regions = len(regions)
+        prev_id = curr_id - 1 if curr_id > 1 else total_regions
+        print('prev_id',prev_id)
+        for r in regions:
+            if r[0] == prev_id:
+                prev_region = r[3]
+                is_prev_active = r[-1]
+                break
+        
+        if is_prev_active:
+            replication_dest, is_active = get_temp_replication_dest(prev_id)
+            if is_active:
+                print('Removing temp replica of', prev_region, 'from', replication_dest)
+                results = make_post_request(f'{replication_dest}/delete_replica', {"region": prev_region, "isReplica": "Temp"})
+                if results["status_code"] not in [200, 201]:
+                    print(f"Failed to fetch data from temp replica of {node.region}")
+                else:
+                    update_temp_replication_dest(curr_id, 0)
             
-            if prev_id != 0:
-                sync_data(prev_id, node.ip, node.port)
+            sync_data(prev_id, curr_ip, curr_port)
 
 @app.post("/unregister_node")
 def unregister_node(node: Node):
     if not node.ip or not node.port or not node.region:
         print('Invalid data to unregister')
         return
+    
     print(f"Unregistering node {node.region}")
     prev_reg_id, next_region_id = remove_region(node.region)
-    return
+    
+    if prev_reg_id !=0 and next_region_id != 0:
+        next_region, next_ip, next_port, active = get_region_details(next_region_id)
+        sync_data(prev_reg_id, next_ip, next_port, 'Temp')
+
+@app.get('/all-available-nodes')
+def all_available_nodes():
+    regions = get_regions()
+    region_names = [r[3] for r in regions]
+    return region_names
 
 @app.post("/post_score")
 def post_score(score: dict):
+    print(score)
     timestamp = str(time.time())
     
     regions = get_all_regions()
@@ -179,7 +253,7 @@ def post_score(score: dict):
                 if is_temp_replica[reg]:
                     isReplica = 'Temp'
                 results.append(make_post_request(node_address[reg][1], {reg:region_wise_scores[reg][reg], 'isReplica': isReplica}))
-        elif reg[-1] == 0:
+        elif is_active[reg] == 0:
             print(f"Region {reg}'s main server is not active, cannot store the data to this region")
     
     for result in results:
@@ -205,7 +279,7 @@ def get_scores(region: str = None):
         region_id = [r[0] for r in regions if r[3] == region][0]
         replication_dest_id = [r[4] for r in regions if r[3] == region][0]
         nodes_address = [region_servers[region], region_replica[region]]
-        nodes_address = [f"{nodes_address[0]}/get_region_data"]
+        nodes_address = [f"{nodes_address[0]}/get_region_data", f"{nodes_address[1]}/get_region_data"]
 
         params = [{"region": region}, {"region": region, "isReplica": "True"}]
         if is_temp_replica[region]:
@@ -219,6 +293,7 @@ def get_scores(region: str = None):
             results.append(make_get_request(nodes_address[1], params=params[1]))
         else:
             print(f"No active nodes to fetch data for {region}")
+            return scores
         
         if results[0]["status_code"] == 200:
             scores['scores'] = results[0]["response"]['scores']
@@ -258,5 +333,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     PORT = args.port
     MASTER_SERVER_HOST = args.host
+    
+    p = Process(target=heartbeat)
+    p.start()
 
     uvicorn.run(app, host=MASTER_SERVER_HOST, port=PORT)

@@ -1,1 +1,0 @@
-# web-server to central-server communication using API endpoints

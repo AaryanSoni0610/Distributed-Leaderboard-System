@@ -24,6 +24,9 @@
                 <li class="nav-item active">
                     <a class="nav-link" href="/add-players/">Add Players</a>
                 </li>
+                <li class="nav-item active">
+                    <a class="nav-link" href="/login/">Login</a>
+                </li>
             </ul>
         </div>
     </nav>
@@ -37,11 +40,14 @@
     
                     <!-- Dropdown Section -->
                     <div class="select-container">
-                        <select class="form-select" aria-label="Default select example" id="regionSelect">
-                            {% for region in regions %}
-                                <option value="{{ forloop.counter0 }}" {% if forloop.first %}selected{% endif %}>{{ region }}</option>
-                            {% endfor %}
-                        </select>
+                        <form id="regionForm" method="post" action="{% url 'rankings' %}">
+                            {% csrf_token %}
+                            <select class="form-select" aria-label="Default select example" id="regionSelect" name="region" onchange="document.getElementById('regionForm').submit();">
+                                {% for region in regions %}
+                                    <option value="{{ region }}" {% if region == selected_region %}selected{% endif %}>{{ region }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
                     </div>
     
                     <!-- Table Section -->
@@ -51,6 +57,7 @@
                             <thead>
                                 <tr>
                                     <th scope="col">Rank</th>
+                                    <th scope="col">Player ID</th>
                                     <th scope="col">Player Name</th>
                                     <th scope="col">Score</th>
                                     <th scope="col">Region</th>
@@ -60,7 +67,8 @@
                                 {% for player in data %}
                                 <tr data-region="{{ player.region }}">
                                     <td>{{ player.rank }}</td>
-                                    <td>{{ player.name }}</td>
+                                    <td>{{ player.player_id }}</td>
+                                    <td>{{ player.player_name }}</td>
                                     <td>{{ player.score }}</td>
                                     <td>{{ player.region }}</td>
                                 </tr>

@@ -30,20 +30,14 @@
     </nav>
 
     <!-- Main Content -->
-    
     <div class="form-wrapper">
         <div class="form-container newCard">
-            <form id="leaderboardForm">
-            </form>
-
-            <!-- Player Section -->
-            <div class="mt-5 text-center">
-                <h5>Player List</h5>
-                <button id="addPlayerBtn" class="btn btn-success btn-sm">+ Add Player</button>
-            </div>
-
-            <!-- Player Form (Initially Hidden) -->
-            <form id="playerForm" class="mt-3" style="display:none;">
+            <!-- Player Form -->
+            <form id="playerForm" class="mt-3">
+                <div class="mb-3">
+                    <label for="playerId" class="form-label">Player ID</label>
+                    <input type="text" class="form-control" id="playerId" placeholder="Enter player ID" required>
+                </div>
                 <div class="mb-3">
                     <label for="playerName" class="form-label">Player Name</label>
                     <input type="text" class="form-control" id="playerName" placeholder="Enter player name" required>
@@ -56,7 +50,7 @@
                     <label for="playerRegion" class="form-label">Player Region</label>
                     <input type="text" class="form-control" id="playerRegion" placeholder="Enter player region" required>
                 </div>
-                <button type="submit" class="btn btn-success w-100">Add Player</button>
+                <button type="button" id="addPlayerBtn" class="btn btn-success w-100">Add Player</button>
             </form>
 
             <!-- Player Table -->
@@ -64,6 +58,7 @@
                 <table class="table table-striped">
                     <thead>
                         <tr>
+                            <th>Player ID</th>
                             <th>Player Name</th>
                             <th>Score</th>
                             <th>Region</th>
@@ -74,37 +69,60 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Submit Form -->
+            <form id="leaderboardForm" method="post" action="{% url 'add_player' %}">
+                {% csrf_token %}
+                <input type="hidden" name="players" id="playersInput">
+                <button type="submit" class="btn btn-success w-100 mt-3">Submit Players</button>
+            </form>
         </div>
     </div>
 
-
     <!-- Scripts -->
     <script>
-        const leaderboardForm = document.getElementById('leaderboardForm');
-        leaderboardForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            alert(`Leaderboard Created: ${document.getElementById('leaderboardName').value}`);
-            leaderboardForm.reset();
-        });
-
-        const addPlayerBtn = document.getElementById('addPlayerBtn');
-        const playerForm = document.getElementById('playerForm');
-        addPlayerBtn.addEventListener('click', function() {
-            playerForm.style.display = playerForm.style.display === 'none' ? 'block' : 'none';
-        });
-
-        const playerTableBody = document.getElementById('playerTableBody');
-        playerForm.addEventListener('submit', function(event) {
-            event.preventDefault();
+        document.getElementById('addPlayerBtn').addEventListener('click', function() {
+            const playerId = document.getElementById('playerId').value;
             const playerName = document.getElementById('playerName').value;
             const playerScore = document.getElementById('playerScore').value;
             const playerRegion = document.getElementById('playerRegion').value;
-            
-            const newRow = `<tr><td>${playerName}</td><td>${playerScore}</td><td>${playerRegion}</td></tr>`;
-            playerTableBody.insertAdjacentHTML('beforeend', newRow);
 
-            playerForm.reset();
-            playerForm.style.display = 'none'; // Hide form after submission
+            if (playerId && playerName && playerScore && playerRegion) {
+                const playerTableBody = document.getElementById('playerTableBody');
+                const newRow = document.createElement('tr');
+                newRow.innerHTML = `
+                    <td>${playerId}</td>
+                    <td>${playerName}</td>
+                    <td>${playerScore}</td>
+                    <td>${playerRegion}</td>
+                `;
+                playerTableBody.appendChild(newRow);
+
+                // Clear the form fields
+                document.getElementById('playerId').value = '';
+                document.getElementById('playerName').value = '';
+                document.getElementById('playerScore').value = '';
+                document.getElementById('playerRegion').value = '';
+            }
+        });
+
+        document.getElementById('leaderboardForm').addEventListener('submit', function(event) {
+            const playerTableBody = document.getElementById('playerTableBody');
+            const rows = playerTableBody.querySelectorAll('tr');
+            const players = [];
+
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                const player = {
+                    player_id: cells[0].innerText,
+                    name: cells[1].innerText,
+                    score: cells[2].innerText,
+                    region: cells[3].innerText
+                };
+                players.push(player);
+            });
+
+            document.getElementById('playersInput').value = JSON.stringify(players);
         });
     </script>
 

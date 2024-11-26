@@ -29,6 +29,10 @@ def check_replica_type(isReplica):
         other = ''
     return other
 
+@app.post('/are-you-active')
+def are_you_active(data: dict):
+    return {"message": "I am active"}
+
 @app.post('/create_replica')
 async def create_replica(data: dict):
     region = data['region']
@@ -43,7 +47,8 @@ async def create_replica(data: dict):
 async def delete_replica(data: dict):
     region = data['region']
     other = check_replica_type(data['isReplica'])
-        
+    
+    print(f"Deleting replica {region}{other}")
     delete_database(f"{region}{other}")
     return {"message": "Replica deleted successfully"}
 
@@ -69,6 +74,7 @@ async def store_data(data: dict):
 
     else:
         try:
+            print(f"Storing data in {key}{other}")
             write(f"{key}{other}", scores)
         except Exception as e:
             num_of_failed_put_opt += 1
@@ -82,6 +88,7 @@ async def store_data(data: dict):
 async def get_region_data(region: str, isReplica: str = None):
     other = check_replica_type(isReplica)
     
+    print(f"Reading data from {region}{other}")
     data = get_data(f"{region}{other}")
     return data
 
