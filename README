@@ -1,24 +1,83 @@
-Aaryan: implementing API server using fastAPI
+# Leaderboard System
 
-2 types of API communication
-- web-server to central server
-- central server to region servers
+This project is a distributed leaderboard system designed to manage and display player scores across multiple regions. It uses FastAPI for the backend and Django for the web interface.
 
-API endpoints:
-- for web-server to central server
-    - create-player (while creating, all the data about player should be passed to this end-point)
-    - update-player (only player-id and updated score should be passed to this end-point)
-    - global-ranking (no data should be passed, as this end-point will simply return the global ranking)
-    - regional-ranking (only region-id should be passed to this end-point)
+## Project Structure
 
-- for central server to regional servers
-    - create-player (to create and replicate player data)   // only send requests to the region which will 
-                                                            // store the data based on consisten hashing
-    - update-player (update multiple replication with quorum based approach) // only send requests to the region 
-                                                            // which has stored the data based on consisten hashing
-    - read
-        - for gloobal ranking, requests to all the regional nodes
-        - for regional ranking, requests only specified regional server and replicated node
+```
+Dub/
+	connections.py
+	db_operations.py
+	node.py
+Goa/
+	connections.py
+	db_operations.py
+	node.py
+Hyd/
+	connections.py
+	db_operations.py
+	Hyderabad_db/
+		000003.log
+		CURRENT
+		LOCK
+		LOG
+		MANIFEST-000002
+	node.py
+Pilani/
+	__pycache__/
+	connections.py
+	db_operations.py
+	node.py
+README
+
+app.py
+connections.py
+db_ops.py
+
+web/
+	dls/
+		db.sqlite3
+		dls/
+			__init__.py
+			asgi.py
+			...
+		leaderboard/
+			...
+		manage.py
+```
+
+## Features
+
+- **Distributed Nodes**: Each region has its own node to manage local player scores.
+- **Replication**: Data is replicated across nodes to ensure availability and fault tolerance.
+- **Django Web Interface**: A user-friendly web interface to view and manage player scores.
+- **FastAPI Backend**: A robust backend to handle API requests and data synchronization.
+
+## Installation
 
 
-write your things to do:
+1. Run the Django server:
+    ```sh
+    cd web/dls
+    python manage.py runserver
+    ```
+
+2. Run the FastAPI master server:
+    ```sh
+    python app.py
+    ```
+
+3. Run the FastAPI nodes (example for Hyderabad node):
+    ```sh
+    cd Hyd
+    python node.py --port 8001 --region Hyderabad --master_server_host 127.0.0.1 --master_server_port 8080
+    ```
+
+## Usage
+
+- Access the web interface at 
+
+http://127.0.0.1:8000
+
+ to view and manage player scores.
+- Use the FastAPI endpoints to interact with the nodes programmatically.
