@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate, login as auth_login
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 import requests, random, json
+from django.contrib.sessions.models import Session
 
 @login_required(login_url='/login/')
 def add_player(request):
@@ -23,8 +24,11 @@ def add_player(request):
 
 def rankings(request):
     regions = ['Global']
-    available_regions = requests.get('http://localhost:8080/all-available-nodes')
-    available_regions = available_regions.json()
+    try:
+        available_regions = requests.get('http://localhost:8080/all-available-nodes')
+        available_regions = available_regions.json()
+    except:
+        available_regions = []
     
     regions += available_regions
     try:
@@ -32,12 +36,15 @@ def rankings(request):
     except:
         selected_region = 'Global'
     
-    if selected_region == 'Global':
-        data = requests.get('http://localhost:8080/get_scores/')
-        data = data.json()
-    else:
-        data = requests.get(f'http://localhost:8080/get_scores/?region={selected_region}')
-        data = data.json()
+    try:
+        if selected_region == 'Global':
+            data = requests.get('http://localhost:8080/get_scores/')
+            data = data.json()
+        else:
+            data = requests.get(f'http://localhost:8080/get_scores/?region={selected_region}')
+            data = data.json()
+    except:
+        data = {'scores':[]}
     
     scores = sorted(data['scores'], key=lambda x: x['score'], reverse=True)
     
@@ -45,12 +52,17 @@ def rankings(request):
 
 def login(request):
     if request.method == 'POST':
-        email = request.POST.get('email')
+        uname = request.POST.get('email')
         password = request.POST.get('password')
-        user = authenticate(request, username=email, password=password)
+        user = authenticate(request, username=uname, password=password)
         if user is not None:
             auth_login(request, user)
-            return redirect('rankings')
+            return redirect('/add-players/')
         else:
             return render(request, 'leaderboard/login.html', {'error': 'Invalid email or password'})
     return render(request, 'leaderboard/login.html')
+
+def clear_sessions():
+    Session.objects.all().delete()
+
+clear_sessions()

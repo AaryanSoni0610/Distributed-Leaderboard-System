@@ -1,0 +1,34 @@
+{
+    "scores":[
+        {
+            "player_id":"1011",
+            "player_name":"Karan",
+            "score":62,
+            "region":"Goa"
+        },
+        {
+            "player_id":"1012",
+            "player_name":"Rohan",
+            "score":81,
+            "region":"Goa"
+        },
+        {
+            "player_id":"1013",
+            "player_name":"Saurabh",
+            "score":54,
+            "region":"Goa"
+        },
+        {
+            "player_id":"1014",
+            "player_name":"Amit",
+            "score":77,
+            "region":"Goa"
+        },
+        {
+            "player_id":"1015",
+            "player_name":"Vishal",
+            "score":88,
+            "region":"Goa"
+        }
+    ]
+}

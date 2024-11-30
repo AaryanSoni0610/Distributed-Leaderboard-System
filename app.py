@@ -102,6 +102,7 @@ def register_node(node: Node):
     total_regions = update_replication_destinations()
     
     if total_regions > 2 and not only_update:
+        print(1)
         next_region, next_ip, next_port, next_active = get_region_details(1)
         prev_region, prev_ip, prev_port, prev_active = get_region_details(total_regions-1)
         
@@ -113,6 +114,7 @@ def register_node(node: Node):
         time.sleep(1)
     
     elif total_regions > 2 and only_update:
+        print(2)
         curr_id, curr_ip, curr_port, active = get_region_details(node.region)
         
         regions = get_regions()
@@ -149,9 +151,11 @@ def register_node(node: Node):
             sync_data(curr_id, next_ip, next_port)
         
     elif total_regions > 1 and not only_update:
+        print(3)
         sync_data(total_regions - 1, node.ip, node.port)
 
     elif only_update:
+        print(4)
         curr_id, curr_ip, curr_port, active = get_region_details(node.region)
         
         regions = get_regions()
@@ -184,6 +188,9 @@ def unregister_node(node: Node):
     
     print(f"Unregistering node {node.region}")
     prev_reg_id, next_region_id = remove_region(node.region)
+    
+    print('prev_reg_id', prev_reg_id)
+    print('next_region_id', next_region_id)
     
     if prev_reg_id !=0 and next_region_id != 0:
         next_region, next_ip, next_port, active = get_region_details(next_region_id)

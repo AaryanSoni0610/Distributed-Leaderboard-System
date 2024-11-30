@@ -1,0 +1,34 @@
+{
+    "scores":[
+        {
+            "player_id":"1001",
+            "player_name":"Aaryan",
+            "score":45,
+            "region":"Hyderabad"
+        },
+        {
+            "player_id":"1002",
+            "player_name":"Arijeet",
+            "score":78,
+            "region":"Hyderabad"
+        },
+        {
+            "player_id":"1003",
+            "player_name":"Sandeep",
+            "score":92,
+            "region":"Hyderabad"
+        },
+        {
+            "player_id":"1004",
+            "player_name":"Rishikesh",
+            "score":34,
+            "region":"Hyderabad"
+        },
+        {
+            "player_id":"1005",
+            "player_name":"Vikram",
+            "score":67,
+            "region":"Hyderabad"
+        }
+    ]
+}

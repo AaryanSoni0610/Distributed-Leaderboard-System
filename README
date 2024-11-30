@@ -1,10 +1,9 @@
-# Leaderboard System
+Leaderboard System
 
 This project is a distributed leaderboard system designed to manage and display player scores across multiple regions. It uses FastAPI for the backend and Django for the web interface.
 
-## Project Structure
+Project Structure
 
-```
 Dub/
 	connections.py
 	db_operations.py
@@ -44,36 +43,29 @@ web/
 		leaderboard/
 			...
 		manage.py
-```
 
-## Features
+Features
 
-- **Distributed Nodes**: Each region has its own node to manage local player scores.
-- **Replication**: Data is replicated across nodes to ensure availability and fault tolerance.
-- **Django Web Interface**: A user-friendly web interface to view and manage player scores.
-- **FastAPI Backend**: A robust backend to handle API requests and data synchronization.
+- Distributed Nodes: Each region has its own node to manage local player scores.
+- Replication: Data is replicated across nodes to ensure availability and fault tolerance.
+- Django Web Interface: A user-friendly web interface to view and manage player scores.
+- FastAPI Backend: A robust backend to handle API requests and data synchronization.
 
-## Installation
+Installation
 
 
 1. Run the Django server:
-    ```sh
     cd web/dls
     python manage.py runserver
-    ```
 
 2. Run the FastAPI master server:
-    ```sh
     python app.py
-    ```
 
 3. Run the FastAPI nodes (example for Hyderabad node):
-    ```sh
     cd Hyd
     python node.py --port 8001 --region Hyderabad --master_server_host 127.0.0.1 --master_server_port 8080
-    ```
 
-## Usage
+Usage
 
 - Access the web interface at 
 

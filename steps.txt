@@ -1,0 +1,46 @@
+first run the master server
+    python3 app.py
+
+then run web server
+    python3 manage.py runserver
+
+then first run all region servers
+    cd Hyd/Goa/Pil/Dub ; clear
+    python3 node.py --port 8081/82/83/84 --region region_name
+
+then post the initial data from global.txt file
+
+then, switch to web server
+    localhost:8000/rankings/
+
+    show different data from regions
+    also, shut down any node, and show that we can still get the data from replication
+
+then, come to the distributed system, delete existing dbs, replicated and original
+then, delete the master.db
+
+close all servers(master, regional, web)
+
+restart master server
+
+then start only one server (Hyderabad)
+post the data from hyd.txt
+
+then start the second server (Pilani)
+post the data from pil.txt
+
+then close the server of any one region
+then show that the we can the data from both regions
+
+then run ther third server (Goa)
+post the data from goa.txt
+
+stop any server to show the temp_replica status
+restart the closed server to show the deletion of temp_replica
+
+start the last server (Dubai)
+post data from dub.txt
+
+stop any two server, then restart the servers to show deletion of temp_replicas
+
+done.

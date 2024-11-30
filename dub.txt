@@ -1,0 +1,34 @@
+{
+    "scores":[
+        {
+            "player_id":"1016",
+            "player_name":"Aditya",
+            "score":29,
+            "region":"Dubai"
+        },
+        {
+            "player_id":"1017",
+            "player_name":"Rakesh",
+            "score":64,
+            "region":"Dubai"
+        },
+        {
+            "player_id":"1018",
+            "player_name":"Pranav",
+            "score":47,
+            "region":"Dubai"
+        },
+        {
+            "player_id":"1019",
+            "player_name":"Siddharth",
+            "score":83,
+            "region":"Dubai"
+        },
+        {
+            "player_id":"1020",
+            "player_name":"Harsh",
+            "score":51,
+            "region":"Dubai"
+        }
+    ]
+}
